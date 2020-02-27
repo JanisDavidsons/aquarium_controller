@@ -108,7 +108,7 @@ bool led_driver_on = false;
 bool timer_on = true;
 //===========================Aquarium timer variables====================================================================
 
-int plant_light_ontime = 1, plant_light_offtime = 17, led_ontime = 17,
+int plant_light_ontime = 10, plant_light_offtime = 17, led_ontime = 17,
 		led_offtime = 22, led_driver_ontime;
 
 int feed_timer = 0;
