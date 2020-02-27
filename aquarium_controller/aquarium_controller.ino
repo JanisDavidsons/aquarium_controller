@@ -72,7 +72,7 @@ void page_2();
 void drawOldBar(int);
 void drawBar_1(int);
 void draw_water_temp();
-void draw_button_list(class Adafruit_GFX_Button *home_btn[]);
+void draw_button_list(class Adafruit_GFX_Button *page_n_buttons[]);
 bool update_button_list(class Adafruit_GFX_Button *home_btn[]);
 void drawScale_1();
 void drawScale_2();
@@ -108,7 +108,7 @@ bool led_driver_on = false;
 bool timer_on = true;
 //===========================Aquarium timer variables====================================================================
 
-int plant_light_ontime = 12, plant_light_offtime = 17, led_ontime = 17,
+int plant_light_ontime = 1, plant_light_offtime = 17, led_ontime = 17,
 		led_offtime = 22, led_driver_ontime;
 
 int feed_timer = 0;
@@ -207,6 +207,8 @@ Adafruit_GFX_Button *page_2_btn[] = { &water_pump_on_btn, &back_btn,
 //===========================Loop Function=========================================================================
 void loop(void) {
 
+	//Serial.println(water_pump_state);
+
 	time_now = millis(); //set millis variable every loop
 
 	if (millis() < time_now + period_2) {
@@ -225,6 +227,13 @@ void loop(void) {
 		if (previous_minutes != rtc.now().minute()) {
 			feed_timer++;
 		}
+
+		if (feed_timer >= 30) {
+			feed_timer_on = false;
+			draw_output_state(1);
+			digitalWrite(water_pump, HIGH);
+			water_pump_state = true;
+		}
 	}
 //===========================First page=========================
 	if (currentpage == 0) {
@@ -238,16 +247,18 @@ void loop(void) {
 			page_1();
 
 		} else if (feed_btn.justPressed()) {
-			feed_timer_on = true;
-			feed_timer = 0;
-			digitalWrite(water_pump, LOW);
-			water_pump_state = false;
-
-			if (feed_timer >= 30) {
+			if (!feed_timer_on) {
+				feed_timer_on = true;
+				feed_timer = 0;
+				digitalWrite(water_pump, LOW);
+				water_pump_state = false;
+				draw_output_state(7);
+			} else {
 				feed_timer_on = false;
-				draw_output_state(1);
+				feed_timer = 0;
 				digitalWrite(water_pump, HIGH);
 				water_pump_state = true;
+				draw_output_state(7);
 			}
 
 		}
@@ -831,6 +842,16 @@ void draw_output_state(int index) {
 			draw_button_state(200, 100, 70, 40, 2, BLACK, GRAY, "OFF");
 		}
 		break;
+	case 7:
+		water_pump_state ? draw_button_state(130, 200, 70, 40, 2, BLACK, GREEN, "ON"):tft.fillRect(130, 200, 70, 40, BLACK);
+
+//		if (water_pump_state) {
+//			draw_button_state(130, 200, 70, 40, 2, BLACK, GREEN, "ON");	//led light from button press
+//		} else {
+//			tft.fillRect(130, 200, 70, 40, BLACK);
+//		}
+		break;
+
 	default:
 		break;
 	}
