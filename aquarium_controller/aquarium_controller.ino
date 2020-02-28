@@ -212,6 +212,9 @@ void loop(void) {
 	time_now = millis(); //set millis variable every loop
 
 	if (millis() < time_now + period_2) {
+		Serial.println(feed_timer);
+		Serial.println(feed_timer_on);
+		Serial.println(water_pump_state);
 		time_now = millis(); //reset counter
 		if (previous_seconds != rtc.now().second()) {
 			aquarium_timer(); //call timer function to check time for relays and turn them on or off
@@ -226,14 +229,18 @@ void loop(void) {
 
 		if (previous_minutes != rtc.now().minute()) {
 			feed_timer++;
+
 		}
 
 		if (feed_timer >= 30) {
 			feed_timer_on = false;
-			draw_output_state(1);
-			digitalWrite(water_pump, HIGH);
+			digitalWrite(water_pump, LOW);
 			water_pump_state = true;
+			draw_output_state(7);
+
 		}
+	}else{
+
 	}
 //===========================First page=========================
 	if (currentpage == 0) {
@@ -249,18 +256,17 @@ void loop(void) {
 		} else if (feed_btn.justPressed()) {
 			if (!feed_timer_on) {
 				feed_timer_on = true;
-				feed_timer = 0;
-				digitalWrite(water_pump, LOW);
+				feed_timer = 29;
+				digitalWrite(water_pump, HIGH);
 				water_pump_state = false;
 				draw_output_state(7);
 			} else {
 				feed_timer_on = false;
 				feed_timer = 0;
-				digitalWrite(water_pump, HIGH);
+				digitalWrite(water_pump, LOW);
 				water_pump_state = true;
 				draw_output_state(7);
 			}
-
 		}
 	}
 
@@ -843,13 +849,13 @@ void draw_output_state(int index) {
 		}
 		break;
 	case 7:
-		water_pump_state ? draw_button_state(130, 200, 70, 40, 2, BLACK, GREEN, "ON"):tft.fillRect(130, 200, 70, 40, BLACK);
+		//!water_pump_state ? draw_button_state(130, 200, 70, 40, 2, BLACK, GREEN, "ON"):tft.fillRect(130, 200, 70, 40, BLACK);
 
-//		if (water_pump_state) {
-//			draw_button_state(130, 200, 70, 40, 2, BLACK, GREEN, "ON");	//led light from button press
-//		} else {
-//			tft.fillRect(130, 200, 70, 40, BLACK);
-//		}
+		if (feed_timer_on) {
+			draw_button_state(130, 200, 70, 40, 2, BLACK, GREEN, "ON");	//led light from button press
+		} else {
+			tft.fillRect(130, 200, 70, 40, BLACK);
+		}
 		break;
 
 	default:
