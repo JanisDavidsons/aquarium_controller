@@ -212,9 +212,6 @@ void loop(void) {
 	time_now = millis(); //set millis variable every loop
 
 	if (millis() < time_now + period_2) {
-		Serial.println(feed_timer);
-		Serial.println(feed_timer_on);
-		Serial.println(water_pump_state);
 		time_now = millis(); //reset counter
 		if (previous_seconds != rtc.now().second()) {
 			aquarium_timer(); //call timer function to check time for relays and turn them on or off
