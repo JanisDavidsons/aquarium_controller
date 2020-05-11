@@ -63,10 +63,9 @@ private:
 
 public:
 	Clock(int coordX, int coordY, const GFXfont *font, Adafruit_GFX *gfx);
-	//virtual ~Clock();
 
-	void getCurrentTime();
-	void getPreviousTime();
+	DateTime getCurrentTime();
+	void setPreviousTime();
 	void displayClock(int size = 0);
 	void setFont(const GFXfont *font);
 

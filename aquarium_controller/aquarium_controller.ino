@@ -14,11 +14,8 @@
 #include "Clock.h"
 
 class MCUFRIEND_kbv tft;
-//create clock object
-RTC_DS3231 rtc;
-//AquariumClock clock(10, 30, &FreeMono24pt7b);
-Clock* aquariumClock;
-Clock* pageTwoClock;
+Clock *aquariumClock;
+Clock *pageTwoClock;
 
 #define MINPRESSURE 200
 #define MAXPRESSURE 1000
@@ -90,13 +87,10 @@ void draw_button_state(int, int, int, int, int, int, int, char *msg);
 void draw_output_state(int);
 
 //===========================Delay variables======================================================================
-unsigned long timer_seoconds = 0;
-const long interval_1 = 10;
-//loading bar delay variables
-int period = 15;
-int oneSecond = 1000;
-int period_3 = 1000;
-unsigned long time_now;
+unsigned long currentSeconds = 0;
+unsigned long previousSeconds = 0;
+int feedTimerCounter = 0;
+bool feed_timer_on = false;
 
 //===========================output pin variables====================================================================
 int water_pump = 39, led_relay = 51, second_relay = 49, PH_controller = 47,
@@ -113,11 +107,9 @@ bool led_driver_on = false;
 bool timer_on = true;
 //===========================Aquarium timer variables=============================================================
 
-int plant_light_ontime = 10, plant_light_offtime = 17, led_ontime = 10,
-		led_offtime = 21, led_driver_ontime;
+int plant_light_ontime, plant_light_offtime, led_ontime = 11,
+		led_offtime = 22, led_driver_ontime;
 
-int feed_timer = 0;
-bool feed_timer_on = false;
 //===========================Touch Screen constants, instance of touch screen=====================================
 
 const int XP = 6, XM = A2, YP = A1, YM = 7;
@@ -131,7 +123,6 @@ Adafruit_GFX_Button plant_light_on_btn, next_btn, feed_btn, start_btn, temp_btn,
 
 //===========================Setup Function=======================================================================
 void setup(void) {
-	time_now = millis();
 	pinMode(led_relay, OUTPUT);
 	pinMode(water_pump, OUTPUT);
 	pinMode(PH_controller, OUTPUT);
@@ -156,13 +147,6 @@ void setup(void) {
 	digitalWrite(fifth_relay, HIGH);
 	digitalWrite(fourth_relay, HIGH);
 
-	//get time on startup
-	DateTime now = rtc.now();
-	rtc.begin();
-	previous_hours = now.hour();
-	previous_minutes = now.minute();
-	previous_seconds = now.second();
-
 	Serial.begin(9600);
 
 	sensors.begin();					//start temperature sensor on setup
@@ -174,32 +158,12 @@ void setup(void) {
 	tft.begin(ID);
 	tft.setRotation(1);            //landscape
 	tft.fillScreen(BLACK);
-	tft.setTextSize(3);
-	tft.setTextColor(WHITE);
-	tft.setCursor(50, 140);
-	tft.print("Loading...");
 
-	tft.setTextColor(tft.color565(255, 255, 0));
-	tft.setCursor(30, 70);
-	tft.print("By:");
-
-	tft.setCursor(30, 100);
-	tft.print("J. Davidsons");
-//
-//	 for (int i=0; i < 400; i++)
-//	   {
-//	     time_now = millis();
-//	     while(millis() < time_now + period){
-//	     //wait approx. [period] ms
-//	     tft.fillRect(BAR_MINY - 10, BLUEBAR_MINX, i, 10, RED);
-//	     }
-//	   }
 	Serial.print(tft.width());
 	Serial.print(F(" x "));
 	Serial.println(tft.height());
 
 	page_0();
-	//aquariumClock->adjustClock(2020, 04, 16, 14, 49, 0);		//This line sets the RTC (CLOCK MODULE) with an date & time
 }
 
 Adafruit_GFX_Button *page_0_btn[] = { &next_btn, &feed_btn, NULL };
@@ -210,37 +174,32 @@ Adafruit_GFX_Button *page_2_btn[] = { &water_pump_on_btn, &back_btn,
 //===========================Loop Function=========================================================================
 void loop(void) {
 
-		if (previous_seconds != aquariumClock->getSecond()) {
-			aquarium_timer(); //call timer function to check time for relays and turn them on or off
-			timer_seoconds++;
-			//sensors.requestTemperatures();
-			//water_temp = sensors.getTempCByIndex(0);
-			time_now = millis();
+	DateTime currentTime = aquariumClock->getCurrentTime();
+
+	if (previous_seconds != currentTime.second()) {
+
+		currentSeconds++;
+		aquarium_timer();
+		//===========================feed timer=========================
+		if (feed_timer_on) {
+			feedTimerCounter++;
+
+			if (feedTimerCounter % 600 == 0) {
+				feed_timer_on = false;
+				digitalWrite(water_pump, LOW);
+				water_pump_state = true;
+				draw_output_state(7);
+				feedTimerCounter = 0;
+			}
+		}
+		//sensors.requestTemperatures();
+		//water_temp = sensors.getTempCByIndex(0);
 	}
 
-	//===========================feed timer=========================
-	if(feed_timer_on){
-
-		if (previous_minutes != rtc.now().minute()) {
-			feed_timer++;
-		}
-
-		if (feed_timer >= 30) {
-			feed_timer_on = false;
-			digitalWrite(water_pump, LOW);
-			water_pump_state = true;
-			draw_output_state(7);
-		}
-	}else{
-
-	}
 //===========================First page=========================
 	if (currentpage == 0) {
-		if (previous_seconds != aquariumClock->getSecond()/*timer_seoconds >= interval_1*/) {
-			//clock(50, 0, &FreeMono24pt7b);
-			aquariumClock->displayClock(1);
-			previous_seconds = aquariumClock->getSecond();
-		}
+
+		aquariumClock->displayClock(1);
 
 		update_button_list(page_0_btn);
 
@@ -250,16 +209,16 @@ void loop(void) {
 		} else if (feed_btn.justPressed()) {
 			if (!feed_timer_on) {
 				feed_timer_on = true;
-				feed_timer = 0;
 				digitalWrite(water_pump, HIGH);
 				water_pump_state = false;
 				draw_output_state(7);
+				feedTimerCounter = 0;
 			} else {
 				feed_timer_on = false;
-				feed_timer = 0;
 				digitalWrite(water_pump, LOW);
 				water_pump_state = true;
 				draw_output_state(7);
+				feedTimerCounter = 0;
 			}
 		}
 	}
@@ -273,25 +232,16 @@ void loop(void) {
 
 		}
 		if (back_btn.justPressed()) {
-			previous_hours = 0;
-			previous_minutes = 0;
-			previous_seconds = 0;
 			page_0();
 
 		} else if (next_btn.justPressed()) {
-			previous_hours = 0;
-			previous_minutes = 0;
-			previous_seconds = 0;
 			page_2();
 		}
 	}
 //===========================Second page========================
 	else if (currentpage == 2) {
 
-		if (timer_seoconds >= interval_1) {
-			pageTwoClock->displayClock();
-			//clock(0, 2, &FreeSerifBoldItalic9pt7b);
-		}
+		pageTwoClock->displayClock();
 
 		update_button_list(page_2_btn);
 
@@ -340,12 +290,14 @@ void loop(void) {
 				draw_output_state(0);
 			}
 		} else if (next_btn.justPressed()) {		//next button
-			previous_hours = 0;
-			previous_minutes = 0;
-			previous_seconds = 0;
+
 			page_2();
 		}
 	}
+	previous_hours = currentTime.hour();
+	previous_minutes = currentTime.minute();
+	previous_seconds = currentTime.second();
+
 }
 //===========================Zero page========================
 void page_0(void) {
@@ -354,7 +306,12 @@ void page_0(void) {
 	next_btn.initButton(&tft, 342, 220, 120, 40, WHITE, CYAN, BLACK, "NEXT", 2);
 	feed_btn.initButton(&tft, 60, 220, 120, 40, WHITE, CYAN, BLACK, "FEED", 2);
 	draw_button_list(page_0_btn);
-	aquariumClock = new Clock(120, 100,&FreeMono24pt7b,&tft);
+
+	aquariumClock = new Clock(120, 100, &FreeMono24pt7b, &tft);
+	//aquariumClock->adjustClock(2020, 04, 16, 14, 49, 0);
+	previous_hours = aquariumClock->getHours();
+	previous_minutes = aquariumClock->getMinutes();
+	previous_seconds = aquariumClock->getSecond();
 }
 
 //===========================First page========================
@@ -395,7 +352,7 @@ void page_2(void) {
 	draw_output_state(0);
 
 	draw_button_list(page_2_btn);
-	pageTwoClock = new Clock(320,20,&FreeSerifBoldItalic9pt7b,&tft);
+	pageTwoClock = new Clock(320, 20, &FreeSerifBoldItalic9pt7b, &tft);
 }
 
 //===========================Function returns,sets pressed X and Y coordinates=====================================
@@ -587,170 +544,28 @@ void draw_water_temp() {
 	last_water_temp = water_temp;
 }
 
-////===========================CLOCK FUNCTION===================================================================
-//void clock(int x, int current_page, const GFXfont *f) {
-//	int seconds_now = rtc.now().second();		//get current time
-//	int minutes_now = rtc.now().minute();
-//	int hours_now = rtc.now().hour();
-//
-//	if (current_page == 0) {
-//		bool shift_rigth_sec = false;
-//		bool shift_rigth_min = false;
-//		bool shift_rigth_hour = false;
-//
-//		int seconds_offset = 25;
-//		int minutes_offset = 25;
-//		int hours_offset = 25;
-//		showmsgXY(110 + x, 130, 1, f, GREEN, ":");
-//		showmsgXY(180 + x, 130, 1, f, GREEN, ":");
-//
-//		//Check if time number is below 10. If so then add 0 and shift right.
-//		if (seconds_now <= 9 && previous_seconds != seconds_now) {
-//			tft.fillRect(200 + x, 100, 60, 40, BLACK);
-//			seconds_offset = 25;
-//			showNumXY(200 + x, 130, 1, f, GREEN, 0);
-//			shift_rigth_sec = true;
-//		} else {
-//			seconds_offset = 0;
-//		}
-//
-//		if (minutes_now <= 9 && previous_minutes != minutes_now) {
-//			tft.fillRect(130 + x, 100, 60, 40, BLACK);
-//			minutes_offset = 25;
-//			showNumXY(130 + x, 130, 1, f, GREEN, 0);
-//			shift_rigth_min = true;
-//		} else {
-//			minutes_offset = 0;
-//		}
-//
-//		if (hours_now <= 9 && previous_hours != hours_now) {
-//			tft.fillRect(60 + x, 100, 60, 40, BLACK);
-//			hours_offset = 25;
-//			showNumXY(60 + x, 130, 1, f, GREEN, 0);
-//			shift_rigth_hour = true;
-//		} else {
-//			hours_offset = 0;
-//		}
-//
-//		//draw seconds on screen
-//		if (previous_seconds != seconds_now) {
-//			if (!shift_rigth_sec) {
-//				tft.fillRect(200 + x, 100, 60, 40, BLACK);
-//			}
-//			showNumXY(200 + x + seconds_offset, 130, 1, f, GREEN, seconds_now);
-//			previous_seconds = seconds_now;
-//
-//			//draw minutes on screen
-//			if (previous_minutes != minutes_now) {
-//				if (!shift_rigth_min) {
-//					tft.fillRect(130 + x, 100, 60, 40, BLACK);
-//				}
-//				showNumXY(130 + x + minutes_offset, 130, 1, f, GREEN,
-//						minutes_now);
-//				previous_minutes = minutes_now;
-//
-//				//draw hours on screen
-//				if (previous_hours != hours_now) {
-//					if (!shift_rigth_hour) {
-//						tft.fillRect(60 + x, 100, 60, 40, BLACK);
-//					}
-//					showNumXY(60 + x + hours_offset, 130, 1, f, GREEN,
-//							hours_now);
-//					previous_hours = hours_now;
-//				}
-//			}
-//		}
-//	} else if (current_page == 2) {
-//		bool shift_rigth_sec = false;
-//		bool shift_rigth_min = false;
-//		bool shift_rigth_hour = false;
-//
-//		int seconds_offset = 10;
-//		int minutes_offset = 10;
-//		int hours_offset = 10;
-//		showmsgXY(335 + x, 20, 1, f, GREEN, ":");
-//		showmsgXY(370 + x, 20, 1, f, GREEN, ":");
-//		//Check if time number is below 10. If so then add 0 and shift right.
-//		if (seconds_now <= 9 && previous_seconds != seconds_now) {
-//			tft.fillRect(380 + x, 5, 20, 20, BLACK);
-//			seconds_offset = 10;
-//			showNumXY(380 + x, 20, 1, f, GREEN, 0);
-//			shift_rigth_sec = true;
-//		} else {
-//			seconds_offset = 0;
-//		}
-//
-//		if (minutes_now <= 9 && previous_minutes != minutes_now) {
-//			tft.fillRect(345 + x, 5, 20, 20, BLACK);
-//			minutes_offset = 10;
-//			showNumXY(345 + x, 20, 1, f, GREEN, 0);
-//			shift_rigth_min = true;
-//		} else {
-//			minutes_offset = 0;
-//		}
-//
-//		if (hours_now <= 9 && previous_hours != hours_now) {
-//			tft.fillRect(310 + x + hours_offset, 5, 20, 20, BLACK);
-//			hours_offset = 10;
-//			showNumXY(310 + x, 20, 1, f, GREEN, 0);
-//			shift_rigth_hour = true;
-//		} else {
-//			hours_offset = 0;
-//		}
-//
-//		//draw seconds on screen
-//		if (previous_seconds != seconds_now) {
-//			if (!shift_rigth_sec) {
-//				tft.fillRect(380 + x, 5, 20, 20, BLACK);
-//			}
-//			showNumXY(380 + x + seconds_offset, 20, 1, f, GREEN, seconds_now);
-//			previous_seconds = seconds_now;
-//
-//			//draw minutes on screen
-//			if (previous_minutes != minutes_now) {
-//				if (!shift_rigth_min) {
-//					tft.fillRect(345 + x, 5, 20, 20, BLACK);
-//
-//				}
-//				showNumXY(345 + x + minutes_offset, 20, 1, f, GREEN,
-//						minutes_now);
-//				previous_minutes = minutes_now;
-//
-//				//draw hours on screen
-//				if (previous_hours != hours_now) {
-//					if (!shift_rigth_hour) {
-//						tft.fillRect(310 + x + hours_offset, 5, 20, 20, BLACK);
-//					}
-//					showNumXY(310 + x + hours_offset, 20, 1, f, GREEN,
-//							hours_now);
-//					previous_hours = hours_now;
-//				}
-//			}
-//		}
-//	}
-//}
 void aquarium_timer() {
 
 	if (timer_on) {
-//	//TIMER FOR PLANT GROW LED LIGHT
-//		if (previous_hours >= plant_light_ontime
-//				&& previous_hours < plant_light_offtime) {//check if timer is within interval
-//			if (!plant_light_state) {					//check if light is off
-//				digitalWrite(plant_light, LOW);
-//				if (currentpage == 2 && !plant_light_state) {
-//					draw_output_state(3);
-//				}
-//				plant_light_state = true;
-//			}
-//		} else {
-//			if (plant_light_state) {
-//				digitalWrite(plant_light, HIGH);
-//				if (currentpage == 2 && plant_light_state) {
-//					draw_output_state(3);
-//				}
-//				plant_light_state = false;
-//			}
-//		}
+	//TIMER FOR PLANT GROW LED LIGHT
+		if (previous_hours >= plant_light_ontime
+				&& previous_hours < plant_light_offtime) {//check if timer is within interval
+			if (!plant_light_state) {					//check if light is off
+				digitalWrite(plant_light, LOW);
+				if (currentpage == 2 && !plant_light_state) {
+					draw_output_state(3);
+				}
+				plant_light_state = true;
+			}
+		} else {
+			if (plant_light_state) {
+				digitalWrite(plant_light, HIGH);
+				if (currentpage == 2 && plant_light_state) {
+					draw_output_state(3);
+				}
+				plant_light_state = false;
+			}
+		}
 		//TIMER FOR LED BACKGROUND LIGHT
 		if (previous_hours >= led_ontime && previous_hours < led_offtime) {	//check if timer is within interval
 

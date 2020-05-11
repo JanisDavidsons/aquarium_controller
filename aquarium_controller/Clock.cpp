@@ -9,11 +9,12 @@
 MCUFRIEND_kbv touchScrn;
 const GFXfont *currenFont;
 RTC_DS3231 realTimeClock;
+DateTime dateTime;
 
 Clock::Clock(int coordX, int coordY, const GFXfont *font, Adafruit_GFX *gfx) {
-
+	realTimeClock.begin();
 	getCurrentTime();
-	getPreviousTime();
+	setPreviousTime();
 	clockX = coordX;
 	clockY = coordY;
 	currenFont = font;
@@ -21,14 +22,15 @@ Clock::Clock(int coordX, int coordY, const GFXfont *font, Adafruit_GFX *gfx) {
 	drawHours(1);
 }
 
-void Clock::getCurrentTime() {
+DateTime Clock::getCurrentTime() {
 	time = realTimeClock.now();
 	seconds_now = time.second();
 	minutes_now = time.minute();
 	hours_now = time.hour();
+	return time;
 }
 
-void Clock::getPreviousTime() {
+void Clock::setPreviousTime() {
 	previousTime = time;
 	previous_seconds = seconds_now;
 	previous_minutes = minutes_now;
@@ -44,7 +46,6 @@ void Clock::drawSeconds(int textSize) {
 
 	_screen->getTextBounds(previousSeconds, minutesX + minutesWidth, clockY,
 			&secondsX, &secondsY, &secondsWidth, &secondsHeight);
-	Serial.println(minutesWidth);
 
 	_screen->fillRect(secondsX, secondsY, secondsWidth, secondsHeight,
 			BLACK);
@@ -150,25 +151,21 @@ void Clock::displayClock(int size =0) {
 
 	getCurrentTime();
 
-	//draw seconds on screen
 	if (previous_seconds != seconds_now) {
 		drawSeconds(size);
 	}
 
-	//draw minutes on screen
 	if (previous_minutes != minutes_now) {
 		drawMinutes(size);
 	}
 
-	//draw hours on screen
 	if (previous_hours != hours_now) {
 		drawHours(size);
 	}
-	getPreviousTime();
+	setPreviousTime();
 }
 
 void Clock::adjustClock(int year,int month,int day, int hours, int minutes, int seconds){
 	realTimeClock.adjust(DateTime(year,month, day, hours, minutes, seconds));		//This line sets the RTC (CLOCK MODULE) with an date & time
-
 }
 
