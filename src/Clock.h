@@ -2,7 +2,7 @@
  * Clock.h
  *
  *  Created on: Mar 21, 2020
- *      Author: janis
+ *      Author: Janis Davidsons
  */
 
 #ifndef CLOCK_H_
@@ -39,7 +39,7 @@ private:
 #define GREEN   	0x07E0
 #define RED     	0xF800
 
-	DateTime time;
+	DateTime currentTime;
 	DateTime previousTime;
 	int seconds_now;  //rtc.now().second();		//get current time
 	int minutes_now;  //rtc.now().minute();
