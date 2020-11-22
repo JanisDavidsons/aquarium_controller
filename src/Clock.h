@@ -34,7 +34,7 @@ private:
 	uint16_t secondColonWidth, secondColonHeight;
 
 	Adafruit_GFX *_screen;
-	GFXfont *currenFont;
+	const GFXfont *currenFont;
 #define BLACK 		0x0000
 #define GREEN   	0x07E0
 #define RED     	0xF800
@@ -68,11 +68,11 @@ public:
 	void setPreviousTime();
 	void displayClock(int size = 0);
 	void setFont(const GFXfont *font);
-
+	void init(int size = 0);
 	int getSecond();
 	int getMinutes();
 	int getHours();
-	void adjustClock(int,int,int,int,int,int);
+	void adjustClock();
 
 private:
 	void drawSeconds(int);

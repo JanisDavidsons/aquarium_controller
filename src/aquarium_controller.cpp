@@ -6,6 +6,7 @@
 #include <TouchScreen.h>
 #include <RTClib.h>
 #include <Clock.h>
+#include "RTClib.h"
 
 class MCUFRIEND_kbv tft;
 Clock *aquariumClock;
@@ -87,15 +88,8 @@ int feedTimerCounter = 0;
 bool feed_timer_on = false;
 
 //===========================output pin variables====================================================================
-int water_pump = 39,
-	led_relay = 51,
-	second_relay = 49,
-	PH_controller = 47,
-	plant_light = 45,
-	third_relay = 43,
-	third_220 = 41,
-	fifth_relay = 37,
-	fourth_relay = 35;
+int water_pump_1 = 22;
+int water_pump_2 = 24;
 
 bool water_pump_state = false;
 bool led_relay_state = false;
@@ -121,46 +115,28 @@ TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
 
 //===========================Button objects======================================================================
 
-Adafruit_GFX_Button 
-	plant_light_on_btn, 
-	next_btn, 
-	feed_btn, 
-	start_btn, 
+Adafruit_GFX_Button
+	plant_light_on_btn,
+	next_btn,
+	feed_btn,
+	start_btn,
 	temp_btn,
-	level_btn, 
-	back_btn, 
-	water_pump_on_btn, 
-	led_btn_on, 
+	level_btn,
+	back_btn,
+	water_pump_on_btn,
+	led_btn_on,
 	timer_btn_on;
 
 //===========================Setup Function=======================================================================
 void setup(void)
 {
-	pinMode(led_relay, OUTPUT);
-	pinMode(water_pump, OUTPUT);
-	pinMode(PH_controller, OUTPUT);
-	pinMode(plant_light, OUTPUT);
-
-	pinMode(second_relay, OUTPUT);
-	pinMode(third_relay, OUTPUT);
-	pinMode(third_220, OUTPUT);
-	pinMode(53, OUTPUT);
-	pinMode(fifth_relay, OUTPUT);
-	pinMode(fourth_relay, OUTPUT);
-
-	digitalWrite(water_pump, LOW);
-	digitalWrite(led_relay, led_relay_state);
-	digitalWrite(plant_light, HIGH);
-	digitalWrite(PH_controller, LOW);
-
-	digitalWrite(second_relay, HIGH);
-	digitalWrite(53, LOW);
-	digitalWrite(third_relay, HIGH);
-	digitalWrite(third_220, HIGH);
-	digitalWrite(fifth_relay, HIGH);
-	digitalWrite(fourth_relay, HIGH);
-
 	Serial.begin(9600);
+
+	pinMode(water_pump_1, OUTPUT);
+	pinMode(water_pump_2, OUTPUT);
+
+	digitalWrite(water_pump_1, LOW);
+	digitalWrite(water_pump_2, LOW);
 
 	sensors.begin(); //start temperature sensor on setup
 	uint16_t ID = tft.readID();
@@ -176,18 +152,22 @@ void setup(void)
 	Serial.print(F(" x "));
 	Serial.println(tft.height());
 
+	aquariumClock = new Clock(120, 100, &FreeMono24pt7b, &tft);
+	pageTwoClock = new Clock(320, 20, &FreeSerifBoldItalic9pt7b, &tft);
+
+	aquariumClock->adjustClock();
 	page_0();
 }
 
 Adafruit_GFX_Button *page_0_btn[] = {&next_btn, &feed_btn, NULL};
 Adafruit_GFX_Button *page_1_btn[] = {&next_btn, &back_btn, NULL};
 Adafruit_GFX_Button *page_2_btn[] = {
-	&water_pump_on_btn, 
+	&water_pump_on_btn,
 	&back_btn,
-	&plant_light_on_btn, 
-	&next_btn, 
-	&led_btn_on, 
-	&timer_btn_on, 
+	&plant_light_on_btn,
+	&next_btn,
+	&led_btn_on,
+	&timer_btn_on,
 	NULL};
 
 //===========================Loop Function=========================================================================
@@ -209,7 +189,9 @@ void loop(void)
 			if (feedTimerCounter % 600 == 0)
 			{
 				feed_timer_on = false;
-				digitalWrite(water_pump, LOW);
+				digitalWrite(water_pump_1, LOW);
+				digitalWrite(water_pump_2, LOW);
+
 				water_pump_state = true;
 				draw_output_state(7);
 				feedTimerCounter = 0;
@@ -236,7 +218,8 @@ void loop(void)
 			if (!feed_timer_on)
 			{
 				feed_timer_on = true;
-				digitalWrite(water_pump, HIGH);
+				digitalWrite(water_pump_1, HIGH);
+				digitalWrite(water_pump_2, HIGH);
 				water_pump_state = false;
 				draw_output_state(7);
 				feedTimerCounter = 0;
@@ -244,7 +227,9 @@ void loop(void)
 			else
 			{
 				feed_timer_on = false;
-				digitalWrite(water_pump, LOW);
+				digitalWrite(water_pump_1, LOW);
+				digitalWrite(water_pump_2, LOW);
+
 				water_pump_state = true;
 				draw_output_state(7);
 				feedTimerCounter = 0;
@@ -287,13 +272,17 @@ void loop(void)
 			if (water_pump_state)
 			{
 				draw_output_state(1);
-				digitalWrite(water_pump, LOW);
+				digitalWrite(water_pump_1, LOW);
+				digitalWrite(water_pump_2, LOW);
+
 				water_pump_state = false;
 			}
 			else
 			{
 				draw_output_state(1);
-				digitalWrite(water_pump, HIGH);
+				digitalWrite(water_pump_1, HIGH);
+				digitalWrite(water_pump_2, HIGH);
+
 				water_pump_state = true;
 			}
 		}
@@ -303,13 +292,13 @@ void loop(void)
 			{
 				if (plant_light_state)
 				{
-					digitalWrite(plant_light, HIGH);
+					// digitalWrite(plant_light, HIGH);
 					plant_light_state = false;
 					draw_output_state(5);
 				}
 				else
 				{
-					digitalWrite(plant_light, LOW);
+					// digitalWrite(plant_light, LOW);
 					plant_light_state = true;
 					draw_output_state(5);
 				}
@@ -321,13 +310,13 @@ void loop(void)
 			{
 				if (led_relay_state)
 				{
-					digitalWrite(led_relay, HIGH);
+					// digitalWrite(led_relay, HIGH);
 					led_relay_state = false;
 					draw_output_state(6);
 				}
 				else
 				{
-					digitalWrite(led_relay, LOW);
+					// digitalWrite(led_relay, LOW);
 					led_relay_state = true;
 					draw_output_state(6);
 				}
@@ -364,9 +353,7 @@ void page_0(void)
 	next_btn.initButton(&tft, 342, 220, 120, 40, WHITE, CYAN, BLACK, "NEXT", 2);
 	feed_btn.initButton(&tft, 60, 220, 120, 40, WHITE, CYAN, BLACK, "FEED", 2);
 	draw_button_list(page_0_btn);
-
-	aquariumClock = new Clock(120, 100, &FreeMono24pt7b, &tft);
-	//aquariumClock->adjustClock(2020, 04, 16, 14, 49, 0);
+	aquariumClock->init(1);
 	previous_hours = aquariumClock->getHours();
 	previous_minutes = aquariumClock->getMinutes();
 	previous_seconds = aquariumClock->getSecond();
@@ -412,7 +399,7 @@ void page_2(void)
 	draw_output_state(0);
 
 	draw_button_list(page_2_btn);
-	pageTwoClock = new Clock(320, 20, &FreeSerifBoldItalic9pt7b, &tft);
+	pageTwoClock->init();
 }
 
 //===========================Function returns,sets pressed X and Y coordinates=====================================
@@ -630,7 +617,7 @@ void aquarium_timer()
 		{ //check if timer is within interval
 			if (!plant_light_state)
 			{ //check if light is off
-				digitalWrite(plant_light, LOW);
+				// digitalWrite(plant_light, LOW);
 				if (currentpage == 2 && !plant_light_state)
 				{
 					draw_output_state(3);
@@ -642,7 +629,7 @@ void aquarium_timer()
 		{
 			if (plant_light_state)
 			{
-				digitalWrite(plant_light, HIGH);
+				// digitalWrite(plant_light, HIGH);
 				if (currentpage == 2 && plant_light_state)
 				{
 					draw_output_state(3);
@@ -656,7 +643,7 @@ void aquarium_timer()
 
 			if (!led_relay_state)
 			{
-				digitalWrite(led_relay, LOW);
+				// digitalWrite(led_relay, LOW);
 				if (currentpage == 2 && !led_relay_state)
 				{
 					draw_output_state(4);
@@ -668,7 +655,7 @@ void aquarium_timer()
 		{
 			if (led_relay_state)
 			{
-				digitalWrite(led_relay, HIGH);
+				// digitalWrite(led_relay, HIGH);
 				if (currentpage == 2 && led_relay_state)
 				{
 					draw_output_state(4);
