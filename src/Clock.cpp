@@ -2,16 +2,17 @@
  * Clock.cpp
  *
  *  Created on: Mar 21, 2020
- *      Author: janis
+ *      Author: Janis Davidsons
  */
 
 #include "Clock.h"
+
 MCUFRIEND_kbv touchScrn;
-const GFXfont *currenFont;
 RTC_DS3231 realTimeClock;
 DateTime dateTime;
 
-Clock::Clock(int coordX, int coordY, const GFXfont *font, Adafruit_GFX *gfx) {
+Clock::Clock(int coordX, int coordY, const GFXfont *font, Adafruit_GFX *gfx)
+{
 	realTimeClock.begin();
 	getCurrentTime();
 	setPreviousTime();
@@ -19,42 +20,43 @@ Clock::Clock(int coordX, int coordY, const GFXfont *font, Adafruit_GFX *gfx) {
 	clockY = coordY;
 	currenFont = font;
 	_screen = gfx;
-	drawHours(1);
 }
 
-DateTime Clock::getCurrentTime() {
-	time = realTimeClock.now();
-	seconds_now = time.second();
-	minutes_now = time.minute();
-	hours_now = time.hour();
-	return time;
+DateTime Clock::getCurrentTime()
+{
+	currentTime = realTimeClock.now();
+	seconds_now = currentTime.second();
+	minutes_now = currentTime.minute();
+	hours_now = currentTime.hour();
+	return currentTime;
 }
 
-void Clock::setPreviousTime() {
-	previousTime = time;
+void Clock::setPreviousTime()
+{
+	previousTime = currentTime;
 	previous_seconds = seconds_now;
 	previous_minutes = minutes_now;
 	previous_hours = hours_now;
 }
 
-void Clock::drawSeconds(int textSize) {
+void Clock::drawSeconds(int textSize)
+{
 	_screen->setTextSize(textSize);
 	_screen->setFont(currenFont);
 
-	char previousSeconds[] = "cc";
+	char previousSeconds[] = "ss";
 	previousTime.toString(previousSeconds);
 
 	_screen->getTextBounds(previousSeconds, minutesX + minutesWidth, clockY,
-			&secondsX, &secondsY, &secondsWidth, &secondsHeight);
+						   &secondsX, &secondsY, &secondsWidth, &secondsHeight);
 
 	_screen->fillRect(secondsX, secondsY, secondsWidth, secondsHeight,
-			BLACK);
+					  BLACK);
 
-	char seconds[] = "cc";
-	time.toString(seconds);
-
+	char seconds[] = "ss";
+	currentTime.toString(seconds);
 	_screen->getTextBounds(seconds, minutesX + minutesWidth, clockY, &secondsX,
-			&secondsY, &secondsWidth, &secondsHeight);
+						   &secondsY, &secondsWidth, &secondsHeight);
 
 	_screen->setCursor(minutesX + minutesWidth, clockY);
 	_screen->setTextColor(GREEN);
@@ -63,23 +65,24 @@ void Clock::drawSeconds(int textSize) {
 	_screen->setFont(NULL);
 }
 
-void Clock::drawMinutes(int textSize) {
+void Clock::drawMinutes(int textSize)
+{
 	_screen->setTextSize(textSize);
 	_screen->setFont(currenFont);
 
-	char clockToClear[] = "bb:cc";
-	time.toString(clockToClear);
+	char clockToClear[] = "mm:ss";
+	currentTime.toString(clockToClear);
 
 	_screen->getTextBounds(clockToClear, hourX + hourWidth, clockY, &minutesX,
-			&minutesY, &minutesWidth, &minutesHeight);
+						   &minutesY, &minutesWidth, &minutesHeight);
 
 	_screen->fillRect(minutesX, minutesY, minutesWidth, minutesHeight, BLACK);
 
-	char minutes[] = "bb";
-	time.toString(minutes);
+	char minutes[] = "mm";
+	currentTime.toString(minutes);
 
 	_screen->getTextBounds(minutes, hourX + hourWidth, clockY, &minutesX,
-			&minutesY, &minutesWidth, &minutesHeight);
+						   &minutesY, &minutesWidth, &minutesHeight);
 
 	_screen->setCursor(hourX + hourWidth, clockY);
 	_screen->setTextColor(GREEN);
@@ -88,39 +91,40 @@ void Clock::drawMinutes(int textSize) {
 	_screen->print(":");
 
 	_screen->getTextBounds(":", hourX + hourWidth + minutesWidth, clockY,
-			&minutesX, &minutesY, &minutesWidth, &minutesHeight);
+						   &minutesX, &minutesY, &minutesWidth, &minutesHeight);
 	_screen->setFont(NULL);
 
 	drawSeconds(textSize);
 }
 
-void Clock::drawHours(int textSize) {
+void Clock::drawHours(int textSize)
+{
 
 	_screen->setTextSize(textSize);
 	_screen->setFont(currenFont);
 
 	char clockToClear[] = "ss:bb:cc";
-	time.toString(clockToClear);
+	currentTime.toString(clockToClear);
 
 	_screen->getTextBounds(clockToClear, clockX, clockY, &hourX, &hourY, &hourWidth,
-			&hourHeight);
+						   &hourHeight);
 
 	_screen->fillRect(hourX, hourY, hourWidth, hourHeight, BLACK);
 
-	char hours[] = "aa";
-	time.toString(hours);
+	char hours[] = "hh";
+	currentTime.toString(hours);
 
 	_screen->getTextBounds(hours, clockX, clockY, &hourX, &hourY, &hourWidth,
-			&hourHeight);
+						   &hourHeight);
 
 	_screen->setCursor(clockX, clockY);
 	_screen->setTextColor(GREEN);
 	_screen->print(hours);
-	_screen->setCursor(clockX+hourWidth, clockY);
+	_screen->setCursor(clockX + hourWidth, clockY);
 	_screen->print(":");
 
-	_screen->getTextBounds(":", clockX+hourWidth, clockY, &hourX, &hourY, &hourWidth,
-			&hourHeight);
+	_screen->getTextBounds(":", clockX + hourWidth, clockY, &hourX, &hourY, &hourWidth,
+						   &hourHeight);
 
 	_screen->setFont(NULL);
 
@@ -128,44 +132,59 @@ void Clock::drawHours(int textSize) {
 	drawSeconds(textSize);
 }
 
-int Clock::getSecond() {
+int Clock::getSecond()
+{
 	getCurrentTime();
 	return seconds_now;
 };
 
-int Clock::getMinutes() {
+int Clock::getMinutes()
+{
 	getCurrentTime();
 	return minutes_now;
 };
 
-int Clock::getHours() {
+int Clock::getHours()
+{
 	getCurrentTime();
 	return hours_now;
 };
 
-void Clock::setFont(const GFXfont *font){
+void Clock::setFont(const GFXfont *font)
+{
 	currenFont = font;
 }
 
-void Clock::displayClock(int size =0) {
-
+void Clock::displayClock(int size)
+{
 	getCurrentTime();
 
-	if (previous_seconds != seconds_now) {
+	if (previous_seconds != seconds_now)
+	{
 		drawSeconds(size);
 	}
 
-	if (previous_minutes != minutes_now) {
+	if (previous_minutes != minutes_now)
+	{
 		drawMinutes(size);
 	}
 
-	if (previous_hours != hours_now) {
+	if (previous_hours != hours_now)
+	{
 		drawHours(size);
 	}
 	setPreviousTime();
 }
 
-void Clock::adjustClock(int year,int month,int day, int hours, int minutes, int seconds){
-	realTimeClock.adjust(DateTime(year,month, day, hours, minutes, seconds));		//This line sets the RTC (CLOCK MODULE) with an date & time
+void Clock::adjustClock()
+{
+	if (realTimeClock.lostPower())
+	{
+		realTimeClock.adjust(DateTime(F(__DATE__), F(__TIME__))); //This line sets the RTC (CLOCK MODULE) with an date & time
+	}
 }
 
+void Clock::init(int size)
+{
+	drawHours(size);
+}

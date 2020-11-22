@@ -2,7 +2,7 @@
  * Clock.h
  *
  *  Created on: Mar 21, 2020
- *      Author: janis
+ *      Author: Janis Davidsons
  */
 
 #ifndef CLOCK_H_
@@ -34,12 +34,12 @@ private:
 	uint16_t secondColonWidth, secondColonHeight;
 
 	Adafruit_GFX *_screen;
-	GFXfont *currenFont;
+	const GFXfont *currenFont;
 #define BLACK 		0x0000
 #define GREEN   	0x07E0
 #define RED     	0xF800
 
-	DateTime time;
+	DateTime currentTime;
 	DateTime previousTime;
 	int seconds_now;  //rtc.now().second();		//get current time
 	int minutes_now;  //rtc.now().minute();
@@ -68,11 +68,11 @@ public:
 	void setPreviousTime();
 	void displayClock(int size = 0);
 	void setFont(const GFXfont *font);
-
+	void init(int size = 0);
 	int getSecond();
 	int getMinutes();
 	int getHours();
-	void adjustClock(int,int,int,int,int,int);
+	void adjustClock();
 
 private:
 	void drawSeconds(int);

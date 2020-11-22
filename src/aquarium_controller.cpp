@@ -1,17 +1,12 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include <MCUFRIEND_kbv.h>
-#include <TimerOne.h>
-#include <Fonts/FreeMonoOblique9pt7b.h>
 #include <FreeDefaultFonts.h>
-#include <Fonts/FreeSans9pt7b.h>
 #include <Fonts/FreeSerifBoldItalic9pt7b.h>
-#include <Fonts/FreeSansBold12pt7b.h>
-#include <Fonts/FreeMono24pt7b.h>
 #include <TouchScreen.h>
+#include <RTClib.h>
+#include <Clock.h>
 #include "RTClib.h"
-
-#include "Clock.h"
 
 class MCUFRIEND_kbv tft;
 Clock *aquariumClock;
@@ -21,17 +16,17 @@ Clock *pageTwoClock;
 #define MAXPRESSURE 1000
 
 //===========================Color variables===================================================================
-#define BLACK   	0x0000
-#define BLUE    	0x001F
-#define RED     	0xF800
-#define GREEN   	0x07E0
-#define CYAN    	0x07FF
-#define MAGENTA 	0xF81F
-#define YELLOW  	0xFFE0
-#define WHITE 		0xFFFF
-#define DARKBLUE 	0x0010
-#define VIOLET 		0x8888
-#define GRAY    	0x8410
+#define BLACK 0x0000
+#define BLUE 0x001F
+#define RED 0xF800
+#define GREEN 0x07E0
+#define CYAN 0x07FF
+#define MAGENTA 0xF81F
+#define YELLOW 0xFFE0
+#define WHITE 0xFFFF
+#define DARKBLUE 0x0010
+#define VIOLET 0x8888
+#define GRAY 0x8410
 //#define GREY   tft.color565(64, 64, 64);
 #define GOLD 0xFEA0
 #define BROWN 0xA145
@@ -51,7 +46,7 @@ DallasTemperature sensors(&oneWire);
 float water_temp = 0;
 float last_water_temp = 20;
 
-#define SHOW_COORDINATES_ON false  //change this to view touch point coordinates in serial monitor
+#define SHOW_COORDINATES_ON false //change this to view touch point coordinates in serial monitor
 
 int redpos = BAR_MINY + 12;
 int greenpos = BAR_MINY + 12;
@@ -93,9 +88,8 @@ int feedTimerCounter = 0;
 bool feed_timer_on = false;
 
 //===========================output pin variables====================================================================
-int water_pump = 39, led_relay = 51, second_relay = 49, PH_controller = 47,
-		plant_light = 45, third_relay = 43, third_220 = 41, fifth_relay = 37,
-		fourth_relay = 35;
+int water_pump_1 = 22;
+int water_pump_2 = 24;
 
 bool water_pump_state = false;
 bool led_relay_state = false;
@@ -107,8 +101,11 @@ bool led_driver_on = false;
 bool timer_on = true;
 //===========================Aquarium timer variables=============================================================
 
-int plant_light_ontime, plant_light_offtime, led_ontime = 11,
-		led_offtime = 22, led_driver_ontime;
+int plant_light_ontime,
+	plant_light_offtime,
+	led_ontime = 11,
+	led_offtime = 22,
+	led_driver_ontime;
 
 //===========================Touch Screen constants, instance of touch screen=====================================
 
@@ -118,75 +115,83 @@ TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
 
 //===========================Button objects======================================================================
 
-Adafruit_GFX_Button plant_light_on_btn, next_btn, feed_btn, start_btn, temp_btn,
-		level_btn, back_btn, water_pump_on_btn, led_btn_on, timer_btn_on;
+Adafruit_GFX_Button
+	plant_light_on_btn,
+	next_btn,
+	feed_btn,
+	start_btn,
+	temp_btn,
+	level_btn,
+	back_btn,
+	water_pump_on_btn,
+	led_btn_on,
+	timer_btn_on;
 
 //===========================Setup Function=======================================================================
-void setup(void) {
-	pinMode(led_relay, OUTPUT);
-	pinMode(water_pump, OUTPUT);
-	pinMode(PH_controller, OUTPUT);
-	pinMode(plant_light, OUTPUT);
-
-	pinMode(second_relay, OUTPUT);
-	pinMode(third_relay, OUTPUT);
-	pinMode(third_220, OUTPUT);
-	pinMode(53, OUTPUT);
-	pinMode(fifth_relay, OUTPUT);
-	pinMode(fourth_relay, OUTPUT);
-
-	digitalWrite(water_pump, LOW);
-	digitalWrite(led_relay, led_relay_state);
-	digitalWrite(plant_light, HIGH);
-	digitalWrite(PH_controller, LOW);
-
-	digitalWrite(second_relay, HIGH);
-	digitalWrite(53, LOW);
-	digitalWrite(third_relay, HIGH);
-	digitalWrite(third_220, HIGH);
-	digitalWrite(fifth_relay, HIGH);
-	digitalWrite(fourth_relay, HIGH);
-
+void setup(void)
+{
 	Serial.begin(9600);
 
-	sensors.begin();					//start temperature sensor on setup
+	pinMode(water_pump_1, OUTPUT);
+	pinMode(water_pump_2, OUTPUT);
+
+	digitalWrite(water_pump_1, LOW);
+	digitalWrite(water_pump_2, LOW);
+
+	sensors.begin(); //start temperature sensor on setup
 	uint16_t ID = tft.readID();
 	Serial.print("TFT ID = 0x");
 	Serial.println(ID, HEX);
 	if (ID == 0xD3D3)
 		ID = 0x9486; // write-only shield
 	tft.begin(ID);
-	tft.setRotation(1);            //landscape
+	tft.setRotation(1); //landscape
 	tft.fillScreen(BLACK);
 
 	Serial.print(tft.width());
 	Serial.print(F(" x "));
 	Serial.println(tft.height());
 
+	aquariumClock = new Clock(120, 100, &FreeMono24pt7b, &tft);
+	pageTwoClock = new Clock(320, 20, &FreeSerifBoldItalic9pt7b, &tft);
+
+	aquariumClock->adjustClock();
 	page_0();
 }
 
-Adafruit_GFX_Button *page_0_btn[] = { &next_btn, &feed_btn, NULL };
-Adafruit_GFX_Button *page_1_btn[] = { &next_btn, &back_btn, NULL };
-Adafruit_GFX_Button *page_2_btn[] = { &water_pump_on_btn, &back_btn,
-		&plant_light_on_btn, &next_btn, &led_btn_on, &timer_btn_on, NULL };
+Adafruit_GFX_Button *page_0_btn[] = {&next_btn, &feed_btn, NULL};
+Adafruit_GFX_Button *page_1_btn[] = {&next_btn, &back_btn, NULL};
+Adafruit_GFX_Button *page_2_btn[] = {
+	&water_pump_on_btn,
+	&back_btn,
+	&plant_light_on_btn,
+	&next_btn,
+	&led_btn_on,
+	&timer_btn_on,
+	NULL};
 
 //===========================Loop Function=========================================================================
-void loop(void) {
+void loop(void)
+{
 
 	DateTime currentTime = aquariumClock->getCurrentTime();
 
-	if (previous_seconds != currentTime.second()) {
+	if (previous_seconds != currentTime.second())
+	{
 
 		currentSeconds++;
 		aquarium_timer();
 		//===========================feed timer=========================
-		if (feed_timer_on) {
+		if (feed_timer_on)
+		{
 			feedTimerCounter++;
 
-			if (feedTimerCounter % 600 == 0) {
+			if (feedTimerCounter % 600 == 0)
+			{
 				feed_timer_on = false;
-				digitalWrite(water_pump, LOW);
+				digitalWrite(water_pump_1, LOW);
+				digitalWrite(water_pump_2, LOW);
+
 				water_pump_state = true;
 				draw_output_state(7);
 				feedTimerCounter = 0;
@@ -196,26 +201,35 @@ void loop(void) {
 		//water_temp = sensors.getTempCByIndex(0);
 	}
 
-//===========================First page=========================
-	if (currentpage == 0) {
+	//===========================First page=========================
+	if (currentpage == 0)
+	{
 
 		aquariumClock->displayClock(1);
 
 		update_button_list(page_0_btn);
 
-		if (next_btn.justPressed()) {
+		if (next_btn.justPressed())
+		{
 			page_1();
-
-		} else if (feed_btn.justPressed()) {
-			if (!feed_timer_on) {
+		}
+		else if (feed_btn.justPressed())
+		{
+			if (!feed_timer_on)
+			{
 				feed_timer_on = true;
-				digitalWrite(water_pump, HIGH);
+				digitalWrite(water_pump_1, HIGH);
+				digitalWrite(water_pump_2, HIGH);
 				water_pump_state = false;
 				draw_output_state(7);
 				feedTimerCounter = 0;
-			} else {
+			}
+			else
+			{
 				feed_timer_on = false;
-				digitalWrite(water_pump, LOW);
+				digitalWrite(water_pump_1, LOW);
+				digitalWrite(water_pump_2, LOW);
+
 				water_pump_state = true;
 				draw_output_state(7);
 				feedTimerCounter = 0;
@@ -223,73 +237,106 @@ void loop(void) {
 		}
 	}
 
-//===========================Second page========================
-	else if (currentpage == 1) {
+	//===========================Second page========================
+	else if (currentpage == 1)
+	{
 		update_button_list(page_1_btn);
 
-		if (water_temp != last_water_temp) {
+		if (water_temp != last_water_temp)
+		{
 			draw_water_temp();
-
 		}
-		if (back_btn.justPressed()) {
+		if (back_btn.justPressed())
+		{
 			page_0();
-
-		} else if (next_btn.justPressed()) {
+		}
+		else if (next_btn.justPressed())
+		{
 			page_2();
 		}
 	}
-//===========================Second page========================
-	else if (currentpage == 2) {
+	//===========================Second page========================
+	else if (currentpage == 2)
+	{
 
 		pageTwoClock->displayClock();
 
 		update_button_list(page_2_btn);
 
-		if (back_btn.justPressed()) {
+		if (back_btn.justPressed())
+		{
 			page_1();
-		} else if (water_pump_on_btn.justPressed()) {		//water pump button
-			if (water_pump_state) {
+		}
+		else if (water_pump_on_btn.justPressed())
+		{ //water pump button
+			if (water_pump_state)
+			{
 				draw_output_state(1);
-				digitalWrite(water_pump, LOW);
+				digitalWrite(water_pump_1, LOW);
+				digitalWrite(water_pump_2, LOW);
+
 				water_pump_state = false;
-			} else {
+			}
+			else
+			{
 				draw_output_state(1);
-				digitalWrite(water_pump, HIGH);
+				digitalWrite(water_pump_1, HIGH);
+				digitalWrite(water_pump_2, HIGH);
+
 				water_pump_state = true;
 			}
-		} else if (plant_light_on_btn.justPressed()) {		//plant light button
-			if (!timer_on) {
-				if (plant_light_state) {
-					digitalWrite(plant_light, HIGH);
+		}
+		else if (plant_light_on_btn.justPressed())
+		{ //plant light button
+			if (!timer_on)
+			{
+				if (plant_light_state)
+				{
+					// digitalWrite(plant_light, HIGH);
 					plant_light_state = false;
 					draw_output_state(5);
-				} else {
-					digitalWrite(plant_light, LOW);
+				}
+				else
+				{
+					// digitalWrite(plant_light, LOW);
 					plant_light_state = true;
 					draw_output_state(5);
 				}
 			}
-		} else if (led_btn_on.justPressed()) {				//led light button
-			if (!timer_on) {
-				if (led_relay_state) {
-					digitalWrite(led_relay, HIGH);
+		}
+		else if (led_btn_on.justPressed())
+		{ //led light button
+			if (!timer_on)
+			{
+				if (led_relay_state)
+				{
+					// digitalWrite(led_relay, HIGH);
 					led_relay_state = false;
 					draw_output_state(6);
-				} else {
-					digitalWrite(led_relay, LOW);
+				}
+				else
+				{
+					// digitalWrite(led_relay, LOW);
 					led_relay_state = true;
 					draw_output_state(6);
 				}
 			}
-		} else if (timer_btn_on.justPressed()) {		//timer on/off button
-			if (timer_on) {
+		}
+		else if (timer_btn_on.justPressed())
+		{ //timer on/off button
+			if (timer_on)
+			{
 				timer_on = false;
-				draw_output_state(0);	//timer on/off
-			} else {
+				draw_output_state(0); //timer on/off
+			}
+			else
+			{
 				timer_on = true;
 				draw_output_state(0);
 			}
-		} else if (next_btn.justPressed()) {		//next button
+		}
+		else if (next_btn.justPressed())
+		{ //next button
 
 			page_2();
 		}
@@ -297,18 +344,16 @@ void loop(void) {
 	previous_hours = currentTime.hour();
 	previous_minutes = currentTime.minute();
 	previous_seconds = currentTime.second();
-
 }
 //===========================Zero page========================
-void page_0(void) {
+void page_0(void)
+{
 	tft.fillScreen(BLACK);
 	currentpage = 0;
 	next_btn.initButton(&tft, 342, 220, 120, 40, WHITE, CYAN, BLACK, "NEXT", 2);
 	feed_btn.initButton(&tft, 60, 220, 120, 40, WHITE, CYAN, BLACK, "FEED", 2);
 	draw_button_list(page_0_btn);
-
-	aquariumClock = new Clock(120, 100, &FreeMono24pt7b, &tft);
-	//aquariumClock->adjustClock(2020, 04, 16, 14, 49, 0);
+	aquariumClock->init(1);
 	previous_hours = aquariumClock->getHours();
 	previous_minutes = aquariumClock->getMinutes();
 	previous_seconds = aquariumClock->getSecond();
@@ -316,7 +361,8 @@ void page_0(void) {
 
 //===========================First page========================
 
-void page_1(void) {
+void page_1(void)
+{
 
 	tft.fillScreen(BLACK);
 	currentpage = 1;
@@ -333,18 +379,19 @@ void page_1(void) {
 }
 
 //===========================Second page========================
-void page_2(void) {
+void page_2(void)
+{
 
 	tft.fillScreen(BLACK);
 	currentpage = 2;
 	water_pump_on_btn.initButton(&tft, 100, 20, 180, 40, WHITE, CYAN, BLACK,
-			"PUMP", 2);
+								 "PUMP", 2);
 	plant_light_on_btn.initButton(&tft, 100, 70, 180, 40, WHITE, CYAN, BLACK,
-			"PLANT LED", 2);
+								  "PLANT LED", 2);
 	led_btn_on.initButton(&tft, 100, 120, 180, 40, WHITE, CYAN, BLACK, "LED",
-			2);
+						  2);
 	timer_btn_on.initButton(&tft, 100, 170, 180, 40, WHITE, CYAN, BLACK,
-			"TIMER", 2);
+							"TIMER", 2);
 	next_btn.initButton(&tft, 300, 220, 180, 40, WHITE, CYAN, BLACK, "NEXT", 2);
 	back_btn.initButton(&tft, 100, 220, 180, 40, WHITE, CYAN, BLACK, "BACK", 2);
 
@@ -352,23 +399,26 @@ void page_2(void) {
 	draw_output_state(0);
 
 	draw_button_list(page_2_btn);
-	pageTwoClock = new Clock(320, 20, &FreeSerifBoldItalic9pt7b, &tft);
+	pageTwoClock->init();
 }
 
 //===========================Function returns,sets pressed X and Y coordinates=====================================
 
-int pixel_x, pixel_y;     //Touch_getXY() updates global vars
-bool Touch_getXY(void) {
+int pixel_x, pixel_y; //Touch_getXY() updates global vars
+bool Touch_getXY(void)
+{
 	TSPoint p = ts.getPoint();
-	pinMode(YP, OUTPUT);      //restore shared pins
+	pinMode(YP, OUTPUT); //restore shared pins
 	pinMode(XM, OUTPUT);
-	digitalWrite(YP, HIGH);   //because TFT control pins
+	digitalWrite(YP, HIGH); //because TFT control pins
 	digitalWrite(XM, HIGH);
 	bool pressed = (p.z > MINPRESSURE && p.z < MAXPRESSURE);
-	if (pressed) {
-		pixel_x = map(p.y, TS_LEFT, TS_RT, 0, tft.width()); //changed to portrait
+	if (pressed)
+	{
+		pixel_x = map(p.y, TS_LEFT, TS_RT, 0, tft.width());	 //changed to portrait
 		pixel_y = map(p.x, TS_TOP, TS_BOT, 0, tft.height()); //changed to portrait
-		if (SHOW_COORDINATES_ON) {
+		if (SHOW_COORDINATES_ON)
+		{
 			Serial.print("X = ");
 			Serial.print(pixel_x); //if set true, prints touch coordinates on Serial.print
 			Serial.print("\tY = ");
@@ -382,7 +432,8 @@ bool Touch_getXY(void) {
  *
  * main program can use isPressed(), justPressed() etc
  */
-bool update_button(Adafruit_GFX_Button *b, bool down) {
+bool update_button(Adafruit_GFX_Button *b, bool down)
+{
 	b->press(down && b->contains(pixel_x, pixel_y));
 	if (b->justReleased())
 		b->drawButton(false);
@@ -394,23 +445,28 @@ bool update_button(Adafruit_GFX_Button *b, bool down) {
 /* most screens have different sets of buttons
  * life is easier if you process whole list in one go
  */
-bool update_button_list(Adafruit_GFX_Button **pb) {
+bool update_button_list(Adafruit_GFX_Button **pb)
+{
 	bool down = Touch_getXY();
-	for (int i = 0; pb[i] != NULL; i++) {
+	for (int i = 0; pb[i] != NULL; i++)
+	{
 		update_button(pb[i], down);
 	}
 	return down;
 }
 
-void draw_button_list(Adafruit_GFX_Button **pb) {
-	for (int i = 0; pb[i] != NULL; i++) {
+void draw_button_list(Adafruit_GFX_Button **pb)
+{
+	for (int i = 0; pb[i] != NULL; i++)
+	{
 		pb[i]->drawButton(false);
 	}
 }
 
 //===============================Function to draw button state=====================================
 void draw_button_state(int x, int y, int width, int height, int sz,
-		int text_color, int box_color, char *msg) {
+					   int text_color, int box_color, char *msg)
+{
 	tft.fillRect(x, y, width, height, box_color);
 	tft.drawRect(x, y, width, height, WHITE);
 	//tft.setFont(f);
@@ -423,7 +479,8 @@ void draw_button_state(int x, int y, int width, int height, int sz,
 
 //===============================Function to draw characters on tft=====================================
 void showmsgXY(int x, int y, int sz, const GFXfont *f, int color,
-		const char *msg) {
+			   const char *msg)
+{
 	//int16_t x1, y1;
 	//uint16_t wid, ht;
 	//tft.drawFastHLine(0, y, tft.width(), WHITE);
@@ -437,7 +494,8 @@ void showmsgXY(int x, int y, int sz, const GFXfont *f, int color,
 
 //===============================Function to draw numbers on tft=====================================
 void showNumXY(int x, int y, int sz, const GFXfont *f, int color,
-		const int number) {
+			   const int number)
+{
 	//int16_t x1, y1;
 	//uint16_t wid, ht;
 	//tft.drawFastHLine(0, y, tft.width(), WHITE);
@@ -450,14 +508,16 @@ void showNumXY(int x, int y, int sz, const GFXfont *f, int color,
 }
 
 //===========================Function to redraw previous bar =============================================
-void drawOldBar(int oldPer) {
+void drawOldBar(int oldPer)
+{
 	tft.fillRect(128, 20 + (150 - oldPer), 10, oldPer, GREEN);
 }
 
 //========================================================================================================
 
 //===========================FIRST SCALE===================================================================
-void drawScale_1() {
+void drawScale_1()
+{
 
 	tft.drawFastVLine(50, 20, 150, WHITE);
 	tft.drawFastHLine(42, 20, 8, WHITE);
@@ -471,12 +531,12 @@ void drawScale_1() {
 	showmsgXY(10, 100, 1, &FreeSerifBoldItalic9pt7b, WHITE, "50%");
 	showmsgXY(25, 170, 1, &FreeSerifBoldItalic9pt7b, WHITE, "0%");
 	showmsgXY(45, 15, 1, &FreeSmallFont, YELLOW, "LEVEL");
-
 }
 
 //===========================SECOND SCALE===================================================================
 
-void drawScale_2() {
+void drawScale_2()
+{
 	tft.drawFastVLine(137, 20, 150, WHITE);
 	tft.drawFastHLine(129, 20, 8, WHITE);
 	tft.drawFastHLine(132, 57.5, 5, WHITE);
@@ -489,12 +549,12 @@ void drawScale_2() {
 	showmsgXY(95, 100, 1, &FreeSerifBoldItalic9pt7b, WHITE, "25*");
 	showmsgXY(105, 170, 1, &FreeSerifBoldItalic9pt7b, WHITE, "0*");
 	showmsgXY(125, 15, 1, &FreeSmallFont, YELLOW, "TEMP 1");
-
 }
 
 //===========================THIRD SCALE===================================================================
 
-void drawScale_3() {
+void drawScale_3()
+{
 	tft.drawFastVLine(224, 20, 150, WHITE);
 	tft.drawFastHLine(216, 20, 8, WHITE);
 	tft.drawFastHLine(219, 57.5, 5, WHITE);
@@ -507,12 +567,12 @@ void drawScale_3() {
 	showmsgXY(185, 100, 1, &FreeSerifBoldItalic9pt7b, WHITE, "25*");
 	showmsgXY(195, 170, 1, &FreeSerifBoldItalic9pt7b, WHITE, "0*");
 	showmsgXY(212, 15, 1, &FreeSmallFont, YELLOW, "TEMP 2");
-
 }
 
 //===========================FOURTH SCALE===================================================================
 
-void drawScale_4() {
+void drawScale_4()
+{
 	tft.drawFastVLine(311, 20, 150, WHITE);
 	tft.drawFastHLine(303, 20, 8, WHITE);
 	tft.drawFastHLine(306, 57.5, 5, WHITE);
@@ -525,10 +585,10 @@ void drawScale_4() {
 	showmsgXY(269, 100, 1, &FreeSerifBoldItalic9pt7b, WHITE, "30*");
 	showmsgXY(269, 170, 1, &FreeSerifBoldItalic9pt7b, WHITE, "20*");
 	showmsgXY(299, 15, 1, &FreeSmallFont, YELLOW, "WATER TEMP");
-
 }
 //===========================function to draw WATER TEMPERATURE BAR on screen===================================================================
-void draw_water_temp() {
+void draw_water_temp()
+{
 
 	tft.fillRect(320, 175, 40, 20, BLACK);
 	showNumXY(320, 190, 1, &FreeSerifBoldItalic9pt7b, GREEN, water_temp);
@@ -536,50 +596,68 @@ void draw_water_temp() {
 
 	int new_temp = map(water_temp, 20, 40, 0, 150);
 	int last_temp = map(last_water_temp, 20, 40, 0, 150);
-	if (water_temp < last_water_temp) {
+	if (water_temp < last_water_temp)
+	{
 		tft.fillRect(315, 170 - last_temp, 30, last_temp - new_temp, BLACK);
-	} else {
+	}
+	else
+	{
 		tft.fillRect(315, 170 - new_temp, 30, new_temp - last_temp, GREEN);
 	}
 	last_water_temp = water_temp;
 }
 
-void aquarium_timer() {
+void aquarium_timer()
+{
 
-	if (timer_on) {
-	//TIMER FOR PLANT GROW LED LIGHT
-		if (previous_hours >= plant_light_ontime
-				&& previous_hours < plant_light_offtime) {//check if timer is within interval
-			if (!plant_light_state) {					//check if light is off
-				digitalWrite(plant_light, LOW);
-				if (currentpage == 2 && !plant_light_state) {
+	if (timer_on)
+	{
+		//TIMER FOR PLANT GROW LED LIGHT
+		if (previous_hours >= plant_light_ontime && previous_hours < plant_light_offtime)
+		{ //check if timer is within interval
+			if (!plant_light_state)
+			{ //check if light is off
+				// digitalWrite(plant_light, LOW);
+				if (currentpage == 2 && !plant_light_state)
+				{
 					draw_output_state(3);
 				}
 				plant_light_state = true;
 			}
-		} else {
-			if (plant_light_state) {
-				digitalWrite(plant_light, HIGH);
-				if (currentpage == 2 && plant_light_state) {
+		}
+		else
+		{
+			if (plant_light_state)
+			{
+				// digitalWrite(plant_light, HIGH);
+				if (currentpage == 2 && plant_light_state)
+				{
 					draw_output_state(3);
 				}
 				plant_light_state = false;
 			}
 		}
 		//TIMER FOR LED BACKGROUND LIGHT
-		if (previous_hours >= led_ontime && previous_hours < led_offtime) {	//check if timer is within interval
+		if (previous_hours >= led_ontime && previous_hours < led_offtime)
+		{ //check if timer is within interval
 
-			if (!led_relay_state) {
-				digitalWrite(led_relay, LOW);
-				if (currentpage == 2 && !led_relay_state) {
+			if (!led_relay_state)
+			{
+				// digitalWrite(led_relay, LOW);
+				if (currentpage == 2 && !led_relay_state)
+				{
 					draw_output_state(4);
 				}
 				led_relay_state = true;
 			}
-		} else {
-			if (led_relay_state) {
-				digitalWrite(led_relay, HIGH);
-				if (currentpage == 2 && led_relay_state) {
+		}
+		else
+		{
+			if (led_relay_state)
+			{
+				// digitalWrite(led_relay, HIGH);
+				if (currentpage == 2 && led_relay_state)
+				{
 					draw_output_state(4);
 				}
 				led_relay_state = false;
@@ -588,82 +666,117 @@ void aquarium_timer() {
 	}
 }
 
-void draw_output_state(int index) {
+void draw_output_state(int index)
+{
 
-	switch (index) {
+	switch (index)
+	{
 	case 0:
-		if (!water_pump_state) {
-			draw_button_state(200, 0, 70, 40, 2, BLACK, GREEN, "ON");//water pump
-		} else {
+		if (!water_pump_state)
+		{
+			draw_button_state(200, 0, 70, 40, 2, BLACK, GREEN, "ON"); //water pump
+		}
+		else
+		{
 			draw_button_state(200, 0, 70, 40, 2, BLACK, GRAY, "OFF");
 		}
 
-		if (timer_on) {
-			draw_button_state(200, 150, 70, 40, 2, BLACK, GREEN, "ON");	//timer
-		} else {
+		if (timer_on)
+		{
+			draw_button_state(200, 150, 70, 40, 2, BLACK, GREEN, "ON"); //timer
+		}
+		else
+		{
 			draw_button_state(200, 150, 70, 40, 2, BLACK, GRAY, "OFF");
 		}
 
-		if (plant_light_state) {
-			draw_button_state(200, 50, 70, 40, 2, BLACK, GREEN, "ON");//plant light
-		} else {
+		if (plant_light_state)
+		{
+			draw_button_state(200, 50, 70, 40, 2, BLACK, GREEN, "ON"); //plant light
+		}
+		else
+		{
 			draw_button_state(200, 50, 70, 40, 2, BLACK, GRAY, "OFF");
 		}
 
-		if (led_relay_state) {
-			draw_button_state(200, 100, 70, 40, 2, BLACK, GREEN, "ON");	//led light
-		} else {
+		if (led_relay_state)
+		{
+			draw_button_state(200, 100, 70, 40, 2, BLACK, GREEN, "ON"); //led light
+		}
+		else
+		{
 			draw_button_state(200, 100, 70, 40, 2, BLACK, GRAY, "OFF");
 		}
 		break;
 	case 1:
-		if (water_pump_state) {
-			draw_button_state(200, 0, 70, 40, 2, BLACK, GREEN, "ON");//water pump
-		} else {
+		if (water_pump_state)
+		{
+			draw_button_state(200, 0, 70, 40, 2, BLACK, GREEN, "ON"); //water pump
+		}
+		else
+		{
 			draw_button_state(200, 0, 70, 40, 2, BLACK, GRAY, "OFF");
 		}
 		break;
 	case 2:
-		if (timer_on) {
-			draw_button_state(200, 150, 70, 40, 2, BLACK, GREEN, "ON");	//timer
-		} else {
+		if (timer_on)
+		{
+			draw_button_state(200, 150, 70, 40, 2, BLACK, GREEN, "ON"); //timer
+		}
+		else
+		{
 			draw_button_state(200, 150, 70, 40, 2, BLACK, GRAY, "OFF");
 		}
 		break;
 	case 3:
-		if (!plant_light_state) {
-			draw_button_state(200, 50, 70, 40, 2, BLACK, GREEN, "ON");//plant light from timer change
-		} else {
+		if (!plant_light_state)
+		{
+			draw_button_state(200, 50, 70, 40, 2, BLACK, GREEN, "ON"); //plant light from timer change
+		}
+		else
+		{
 			draw_button_state(200, 50, 70, 40, 2, BLACK, GRAY, "OFF");
 		}
 		break;
 	case 4:
-		if (!led_relay_state) {
-			draw_button_state(200, 100, 70, 40, 2, BLACK, GREEN, "ON");	//led light from timer change
-		} else {
+		if (!led_relay_state)
+		{
+			draw_button_state(200, 100, 70, 40, 2, BLACK, GREEN, "ON"); //led light from timer change
+		}
+		else
+		{
 			draw_button_state(200, 100, 70, 40, 2, BLACK, GRAY, "OFF");
 		}
 		break;
 	case 5:
-		if (plant_light_state) {
-			draw_button_state(200, 50, 70, 40, 2, BLACK, GREEN, "ON");//plant light from button press
-		} else {
+		if (plant_light_state)
+		{
+			draw_button_state(200, 50, 70, 40, 2, BLACK, GREEN, "ON"); //plant light from button press
+		}
+		else
+		{
 			draw_button_state(200, 50, 70, 40, 2, BLACK, GRAY, "OFF");
 		}
 		break;
 	case 6:
-		if (led_relay_state) {
-			draw_button_state(200, 100, 70, 40, 2, BLACK, GREEN, "ON");	//led light from button press
-		} else {
+		if (led_relay_state)
+		{
+			draw_button_state(200, 100, 70, 40, 2, BLACK, GREEN, "ON"); //led light from button press
+		}
+		else
+		{
 			draw_button_state(200, 100, 70, 40, 2, BLACK, GRAY, "OFF");
 		}
 		break;
 	case 7:
 		//!water_pump_state ? draw_button_state(130, 200, 70, 40, 2, BLACK, GREEN, "ON"):tft.fillRect(130, 200, 70, 40, BLACK);
 
-		if (feed_timer_on) {
-			draw_button_state(130, 200, 70, 40, 2, BLACK, GREEN, "ON");	//led light from button press
-		} else {
+		if (feed_timer_on)
+		{
+			draw_button_state(130, 200, 70, 40, 2, BLACK, GREEN, "ON"); //led light from button press
+		}
+		else
+		{
 			tft.fillRect(130, 200, 70, 40, BLACK);
 		}
 		break;
