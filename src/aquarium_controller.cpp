@@ -6,11 +6,21 @@
 #include <TouchScreen.h>
 #include <RTClib.h>
 #include <Clock.h>
-#include "RTClib.h"
 
 class MCUFRIEND_kbv tft;
 Clock *aquariumClock;
 Clock *pageTwoClock;
+char  next [] = "NEXT";
+char  feed [] = "FEED";
+char  back [] = "BACK";
+char  led [] = "LED";
+char  timer [] = "TIMER";
+char  plantLed [] = "PLANT LED";
+char  pump [] = "PUMP";
+char  on [] = "ON";
+char  off [] = "OFF";
+
+
 
 #define MINPRESSURE 200
 #define MAXPRESSURE 1000
@@ -350,8 +360,8 @@ void page_0(void)
 {
 	tft.fillScreen(BLACK);
 	currentpage = 0;
-	next_btn.initButton(&tft, 342, 220, 120, 40, WHITE, CYAN, BLACK, "NEXT", 2);
-	feed_btn.initButton(&tft, 60, 220, 120, 40, WHITE, CYAN, BLACK, "FEED", 2);
+	next_btn.initButton(&tft, 342, 220, 120, 40, WHITE, CYAN, BLACK, next, 2);
+	feed_btn.initButton(&tft, 60, 220, 120, 40, WHITE, CYAN, BLACK, feed, 2);
 	draw_button_list(page_0_btn);
 	aquariumClock->init(1);
 	previous_hours = aquariumClock->getHours();
@@ -367,8 +377,8 @@ void page_1(void)
 	tft.fillScreen(BLACK);
 	currentpage = 1;
 
-	back_btn.initButton(&tft, 60, 220, 120, 40, WHITE, CYAN, BLACK, "BACK", 2);
-	next_btn.initButton(&tft, 342, 220, 120, 40, WHITE, CYAN, BLACK, "NEXT", 2);
+	back_btn.initButton(&tft, 60, 220, 120, 40, WHITE, CYAN, BLACK, back, 2);
+	next_btn.initButton(&tft, 342, 220, 120, 40, WHITE, CYAN, BLACK, next, 2);
 
 	draw_button_list(page_1_btn);
 
@@ -385,15 +395,15 @@ void page_2(void)
 	tft.fillScreen(BLACK);
 	currentpage = 2;
 	water_pump_on_btn.initButton(&tft, 100, 20, 180, 40, WHITE, CYAN, BLACK,
-								 "PUMP", 2);
+								 pump, 2);
 	plant_light_on_btn.initButton(&tft, 100, 70, 180, 40, WHITE, CYAN, BLACK,
-								  "PLANT LED", 2);
-	led_btn_on.initButton(&tft, 100, 120, 180, 40, WHITE, CYAN, BLACK, "LED",
+								  plantLed, 2);
+	led_btn_on.initButton(&tft, 100, 120, 180, 40, WHITE, CYAN, BLACK, led,
 						  2);
 	timer_btn_on.initButton(&tft, 100, 170, 180, 40, WHITE, CYAN, BLACK,
-							"TIMER", 2);
-	next_btn.initButton(&tft, 300, 220, 180, 40, WHITE, CYAN, BLACK, "NEXT", 2);
-	back_btn.initButton(&tft, 100, 220, 180, 40, WHITE, CYAN, BLACK, "BACK", 2);
+							timer, 2);
+	next_btn.initButton(&tft, 300, 220, 180, 40, WHITE, CYAN, BLACK, next, 2);
+	back_btn.initButton(&tft, 100, 220, 180, 40, WHITE, CYAN, BLACK, next, 2);
 
 	//Drawing position of the buttons on the screen
 	draw_output_state(0);
@@ -674,98 +684,98 @@ void draw_output_state(int index)
 	case 0:
 		if (!water_pump_state)
 		{
-			draw_button_state(200, 0, 70, 40, 2, BLACK, GREEN, "ON"); //water pump
+			draw_button_state(200, 0, 70, 40, 2, BLACK, GREEN, on); //water pump
 		}
 		else
 		{
-			draw_button_state(200, 0, 70, 40, 2, BLACK, GRAY, "OFF");
+			draw_button_state(200, 0, 70, 40, 2, BLACK, GRAY, off);
 		}
 
 		if (timer_on)
 		{
-			draw_button_state(200, 150, 70, 40, 2, BLACK, GREEN, "ON"); //timer
+			draw_button_state(200, 150, 70, 40, 2, BLACK, GREEN, on); //timer
 		}
 		else
 		{
-			draw_button_state(200, 150, 70, 40, 2, BLACK, GRAY, "OFF");
+			draw_button_state(200, 150, 70, 40, 2, BLACK, GRAY, off);
 		}
 
 		if (plant_light_state)
 		{
-			draw_button_state(200, 50, 70, 40, 2, BLACK, GREEN, "ON"); //plant light
+			draw_button_state(200, 50, 70, 40, 2, BLACK, GREEN, on); //plant light
 		}
 		else
 		{
-			draw_button_state(200, 50, 70, 40, 2, BLACK, GRAY, "OFF");
+			draw_button_state(200, 50, 70, 40, 2, BLACK, GRAY, off);
 		}
 
 		if (led_relay_state)
 		{
-			draw_button_state(200, 100, 70, 40, 2, BLACK, GREEN, "ON"); //led light
+			draw_button_state(200, 100, 70, 40, 2, BLACK, GREEN, on); //led light
 		}
 		else
 		{
-			draw_button_state(200, 100, 70, 40, 2, BLACK, GRAY, "OFF");
+			draw_button_state(200, 100, 70, 40, 2, BLACK, GRAY, off);
 		}
 		break;
 	case 1:
 		if (water_pump_state)
 		{
-			draw_button_state(200, 0, 70, 40, 2, BLACK, GREEN, "ON"); //water pump
+			draw_button_state(200, 0, 70, 40, 2, BLACK, GREEN, on); //water pump
 		}
 		else
 		{
-			draw_button_state(200, 0, 70, 40, 2, BLACK, GRAY, "OFF");
+			draw_button_state(200, 0, 70, 40, 2, BLACK, GRAY, off);
 		}
 		break;
 	case 2:
 		if (timer_on)
 		{
-			draw_button_state(200, 150, 70, 40, 2, BLACK, GREEN, "ON"); //timer
+			draw_button_state(200, 150, 70, 40, 2, BLACK, GREEN, on); //timer
 		}
 		else
 		{
-			draw_button_state(200, 150, 70, 40, 2, BLACK, GRAY, "OFF");
+			draw_button_state(200, 150, 70, 40, 2, BLACK, GRAY, off);
 		}
 		break;
 	case 3:
 		if (!plant_light_state)
 		{
-			draw_button_state(200, 50, 70, 40, 2, BLACK, GREEN, "ON"); //plant light from timer change
+			draw_button_state(200, 50, 70, 40, 2, BLACK, GREEN, on); //plant light from timer change
 		}
 		else
 		{
-			draw_button_state(200, 50, 70, 40, 2, BLACK, GRAY, "OFF");
+			draw_button_state(200, 50, 70, 40, 2, BLACK, GRAY, off);
 		}
 		break;
 	case 4:
 		if (!led_relay_state)
 		{
-			draw_button_state(200, 100, 70, 40, 2, BLACK, GREEN, "ON"); //led light from timer change
+			draw_button_state(200, 100, 70, 40, 2, BLACK, GREEN, on); //led light from timer change
 		}
 		else
 		{
-			draw_button_state(200, 100, 70, 40, 2, BLACK, GRAY, "OFF");
+			draw_button_state(200, 100, 70, 40, 2, BLACK, GRAY, off);
 		}
 		break;
 	case 5:
 		if (plant_light_state)
 		{
-			draw_button_state(200, 50, 70, 40, 2, BLACK, GREEN, "ON"); //plant light from button press
+			draw_button_state(200, 50, 70, 40, 2, BLACK, GREEN, on); //plant light from button press
 		}
 		else
 		{
-			draw_button_state(200, 50, 70, 40, 2, BLACK, GRAY, "OFF");
+			draw_button_state(200, 50, 70, 40, 2, BLACK, GRAY, off);
 		}
 		break;
 	case 6:
 		if (led_relay_state)
 		{
-			draw_button_state(200, 100, 70, 40, 2, BLACK, GREEN, "ON"); //led light from button press
+			draw_button_state(200, 100, 70, 40, 2, BLACK, GREEN, on); //led light from button press
 		}
 		else
 		{
-			draw_button_state(200, 100, 70, 40, 2, BLACK, GRAY, "OFF");
+			draw_button_state(200, 100, 70, 40, 2, BLACK, GRAY, off);
 		}
 		break;
 	case 7:
@@ -773,7 +783,7 @@ void draw_output_state(int index)
 
 		if (feed_timer_on)
 		{
-			draw_button_state(130, 200, 70, 40, 2, BLACK, GREEN, "ON"); //led light from button press
+			draw_button_state(130, 200, 70, 40, 2, BLACK, GREEN, on); //led light from button press
 		}
 		else
 		{
